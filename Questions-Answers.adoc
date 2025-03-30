@@ -1,0 +1,30 @@
+# How to Backup an OpenShift cluster ?
+
+* Backups and Restore: https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/backup_and_restore
+
+* Best practices for restoring PVCs using OADP in OpenShift: https://access.redhat.com/solutions/7090331
+
+* How frequently etcd backups should be generated in OpenShift 4? https://access.redhat.com/solutions/7083886
+
+* Automated etcd backups during upgrade: https://access.redhat.com/solutions/7008368
+
+# How to Upgrade an OpenShift cluster ?
+
+* How to update an OpenShift cluster https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/updating_clusters
+
+* Online Update Tool https://access.redhat.com/labs/ocpupgradegraph/update_path/
+
+* How to upgrade multiple compute nodes at the same time in RHOCP 4  https://access.redhat.com/solutions/5453781
+
+# Storage solutions for noSQL databases on OpenShift
+
+* How LightBits and OpenShift boost MongoDB performance https://developers.redhat.com/articles/2023/08/29/lightbits-openshift-boost-mongodb-performance-aws
+
+* How to run MongoDB on OpenShift with Portworkx https://portworx.com/blog/run-ha-mongodb-red-hat-openshift/
+
+* OpenShift Data Foundation (ODF) https://docs.redhat.com/en/documentation/red_hat_openshift_data_foundation/4.18
+
+
+
+
+
