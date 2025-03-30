@@ -24,6 +24,66 @@
 
 * OpenShift Data Foundation (ODF) https://docs.redhat.com/en/documentation/red_hat_openshift_data_foundation/4.18
 
+# MongoDB on OpenShift best practices
+
+* Definisci un PVC con dimensione adeguata al carico di lavoro, evitando resize frequenti.
+
+*  Se MongoDB richiede prestazioni costanti e bassa latenza, evita il dynamic provisioning, preferendo la definizione statica dei PV (Quando si usa il dynamic provisioning, i volumi vengono creati on-demand dal provisioner in base alla StorageClass.
+Questo significa che il volume potrebbe essere assegnato a storage di diversa qualità o latenza in base alle risorse disponibili nel momento della creazione.)
+
+* Ogni replica deve avere il proprio PVC quindi è consigliato usare Stateful Sets
+
+[source,yaml]
+----
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: mongodb
+spec:
+  serviceName: "mongodb"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:6.0
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongodb-storage
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 100Gi
+        storageClassName: fast-storage
+----
+
+Se usi OpenShift Data Foundation (ODF), una delle migliori opzioni per MongoDB è Ceph RBD (RADOS Block Device) con una configurazione ottimizzata per replica e caching
+
+. **Replica Ottimizzata**
+.. Evita l’Erasure Coding (EC) per i database transazionali, perché aggiunge latenza nella ricostruzione dei dati.
+.. Usa replica 3x (tre copie dei dati su nodi distinti) per garantire alta disponibilità e prestazioni stabili.
+
+. **Caching Ottimizzato**
+..    Enable RBD Cache (rbd_cache = true): migliora le prestazioni di lettura/scrittura tenendo i dati più recenti in cache.
+..    Usa Writeback Mode (rbd_cache_max_dirty con valore alto): permette di accumulare più scritture prima di sincronizzarle sul disco.
+..    Tuning di rbd_cache_size: aumenta la cache per migliorare i burst di scrittura.
+
+. **Configurazioni OpenShift Importanti**
+..    StorageClass consigliata: Usa Ceph RBD con fsType: xfs per una gestione più efficiente della frammentazione.
+..    PVC con ReadWriteOnce (RWO): MongoDB richiede volumi a blocchi non condivisi.
+..    Evita il Thin Provisioning: Usa allowVolumeExpansion: true per gestire la crescita dei dati.
 
 
 
