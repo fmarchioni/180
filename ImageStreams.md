@@ -10,7 +10,7 @@ L'obiettivo è configurare un'applicazione su OpenShift utilizzando gli **ImageS
    - `registry.ocp4.example.com:8443/ubi8/httpd-24:1-215`
 3. **Configurazione del deployment**: Dovete configurare un deployment che utilizzi l'ImageStream e aggiungere un trigger di cambio immagine.
 4. **Aggiornamento automatico**: Dimostrare che il deployment si aggiorna automaticamente quando l'ImageStream viene modificato per puntare a una nuova immagine.
-5. **Rollback**: Dimostrare la capacità di tornare alla versione precedente dell'immagine.
+5. **Rollback**: Tornare alla versione precedente dell'immagine.
 
 ### 1. Creazione del Progetto
 Create un nuovo progetto su OpenShift chiamato `httpd-triggers`. Questo sarà il namespace in cui lavorerete.
