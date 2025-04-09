@@ -1,0 +1,12 @@
+Extra commands to enhance the Lab 3.2 with nsenter:
+
+----
+lab start pods-containers
+. . . .
+
+# processes runnin in the container
+nsenter --target $PID --pid bash -c 'ps -ef' 
+
+# send output to the standard out of the process identified by PID
+nsenter --target $PID --mount --uts --ipc --net --pid   bash -c 'echo "🔥 Hello from outside!" > /dev/pts/0'
+----
