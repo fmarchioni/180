@@ -19,13 +19,13 @@ image::nodejs.png[]
 L'applicazione NodeJS include già dei readiness e liveness endpoints. Potete verificare quali sono entrando nel Pod NodeJS ed ispezionando i files Javascript (js) presenti. 
 
 * Impostare un readiness probe sul DeploymentConfig in base all' endpoint disponibile. Usare questi settaggi:
-  - initial-delay-seconds=5 \
-  - period-seconds=15 \
+  - initial-delay-seconds=5 
+  - period-seconds=15 
   - failure-threshold=2
 
 * Impostare un liveness probe sul DeploymentConfig in base all'endpoint disponibile. Usare questi settaggi:
-  - initial-delay-seconds=5 \
-  - period-seconds=15 \
+  - initial-delay-seconds=5 
+  - period-seconds=15 
   - failure-threshold=2
 
 === Aggiunta Dati
