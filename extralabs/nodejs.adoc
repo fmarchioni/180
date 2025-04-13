@@ -1,15 +1,23 @@
-# Lab di esercitazione n.1
+= Lab di esercitazione n.1
 
-## Descrizione
+== Descrizione
 
-Occorre eseguire il deploy e la customizzazione di una applicazione NodeJS + PostgreSQL
+Occorre eseguire il deploy e la customizzazione di una applicazione **NodeJS + PostgreSQL**.
 
-* I workloads saranno aggiunti nel progetto `nodejs` che dovete create.
+image::nodejs.png[]
+
+=== Installazione
+
+* I workloads saranno aggiunti nel progetto `nodejs` che dovete creare.
 * Dalla vista Developer, creare template Nodejs + PostgreSQL (ephemeral) nel progetto
 * Impostare username/password del DB (lasciare il Databasename di default `my_data`)
 
 * Verificare che l'applicazione sia raggiungibile tramite Route dell'applicazione NodeJS
-* L'applicazione NodeJS include già dei readiness e liveness endpoints. Potete verificare quali sono entrando nel Pod NodeJS ed ispezionando i files Javascript (js) presenti. 
+
+=== Impostazione Probes
+
+L'applicazione NodeJS include già dei readiness e liveness endpoints. Potete verificare quali sono entrando nel Pod NodeJS ed ispezionando i files Javascript (js) presenti. 
+
 * Impostare un readiness probe sul DeploymentConfig in base all' endpoint disponibile. Usare questi settaggi:
   - initial-delay-seconds=5 \
   - period-seconds=15 \
@@ -20,9 +28,10 @@ Occorre eseguire il deploy e la customizzazione di una applicazione NodeJS + Pos
   - period-seconds=15 \
   - failure-threshold=2
 
+=== Aggiunta Dati
 
 * Connettersi al Pod del DB in rsh
-* Usare il tool psql per connettersi al DB
+* Usare il tool **psql** presente nel Container del DB per inserire dei dati di esempio.
 
 ----
 psql -U postgresql -d my_data
@@ -39,4 +48,4 @@ INSERT INTO products (id, name, stock) VALUES
   (8, 'Kiwi', 9);
 ----
   
-Verificare nella route di NodeJS che i prodotti sono presenti
+Verificare nella route di NodeJS che i prodotti siano presenti.
