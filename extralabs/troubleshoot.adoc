@@ -1,0 +1,109 @@
+= Lab di esercitazione n.2
+
+== Descrizione
+
+Occorre installare una applicazione partendo da un descrittore YAML che contiene alcune risorse definite.
+ 
+
+=== Installazione
+
+* Dalla macchina workstation, eseguire accesso al cluster OpenShift con l'utente `developer`
+* Create un progetto `example`
+* Scaricate un pacchetto YAML `app.yaml` contenente alcune risorse (Deployment / Service)
+
+----
+curl -L -o app.yaml https://raw.githubusercontent.com/fmarchioni/180/refs/heads/main/app.yaml
+----
+
+* Il file app.yaml definisce un Service ed un Deployment ma contiene diversi errori che vanno identificati.
+
+* Una volta risolti tutti gli errori, esporre il Service come Route
+
+* Cancellare il progetto a fine esercizio
+
+=== Suggerimenti
+
+* Saranno probabilmente eseguiti più passaggi per identificare tutti gli errori, per cui può tornare utile il comando `oc apply -f app.yaml` per eseguire aggiornamenti delle risorse
+
+* Il seguente messaggio di Warning può essere ignorato
+
+[NOTE]
+Warning: resource services/example is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by oc apply. oc apply should only be used on resources created declaratively by either oc create --save-config or oc apply. The missing annotation will be patched automatically.
+
+* L'immagine che viene utilizzata ha un Dockerfile con gli stessi settaggi del seguente
+
+[source,dockerfile]
+----
+FROM registry.redhat.io/rhel9/s2i-core:9.5@sha256:5534d21cb1324930baf94986ea84d6b726a68c9029faecd09f1fb08c7402b9cd
+
+# Apache HTTP Server image.
+#
+# Volumes:
+#  * /var/www - Datastore for httpd
+#  * /var/log/httpd24 - Storage for logs when $HTTPD_LOG_TO_VOLUME is set
+# Environment:
+#  * $HTTPD_LOG_TO_VOLUME (optional) - When set, httpd will log into /var/log/httpd24
+
+ENV HTTPD_VERSION=2.4 \
+    HTTPD_SHORT_VERSION=24 \
+    NAME=httpd
+
+ENV SUMMARY="Platform for running Apache httpd $HTTPD_VERSION or building httpd-based application" \
+    DESCRIPTION="Apache httpd $HTTPD_VERSION available as container, is a powerful, efficient, \
+and extensible web server. Apache supports a variety of features, many implemented as compiled modules \
+which extend the core functionality. \
+These can range from server-side programming language support to authentication schemes. \
+Virtual hosting allows one Apache installation to serve many different Web sites."
+
+LABEL summary="$SUMMARY" \
+      description="$DESCRIPTION" \
+      io.k8s.description="$DESCRIPTION" \
+      io.k8s.display-name="Apache httpd $HTTPD_VERSION" \
+      io.openshift.expose-services="8080:http,8443:https" \
+      io.openshift.tags="builder,$NAME,$NAME-$HTTPD_SHORT_VERSION" \
+      name="rhel9/$NAME-$HTTPD_SHORT_VERSION" \
+      version="1" \
+      com.redhat.license_terms="https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI" \
+      com.redhat.component="$NAME-$HTTPD_SHORT_VERSION-container" \
+      usage="s2i build https://github.com/sclorg/httpd-container.git --context-dir=examples/sample-test-app/ rhel9/$NAME-$HTTPD_SHORT_VERSION sample-server" \
+      maintainer="SoftwareCollections.org <sclorg@redhat.com>"
+
+EXPOSE 8080
+EXPOSE 8443
+
+RUN INSTALL_PKGS="gettext hostname nss_wrapper-libs bind-utils httpd mod_ssl mod_ldap mod_session mod_security mod_auth_mellon sscg" && \
+    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    rpm -V $INSTALL_PKGS && \
+    httpd -v | grep -qe "Apache/$HTTPD_VERSION" && echo "Found VERSION $HTTPD_VERSION" && \
+    yum -y clean all --enablerepo='*'
+
+ENV HTTPD_CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/httpd/ \
+    HTTPD_APP_ROOT=${APP_ROOT} \
+    HTTPD_CONFIGURATION_PATH=${APP_ROOT}/etc/httpd.d \
+    HTTPD_MAIN_CONF_PATH=/etc/httpd/conf \
+    HTTPD_MAIN_CONF_MODULES_D_PATH=/etc/httpd/conf.modules.d \
+    HTTPD_MAIN_CONF_D_PATH=/etc/httpd/conf.d \
+    HTTPD_TLS_CERT_PATH=/etc/httpd/tls \
+    HTTPD_VAR_RUN=/var/run/httpd \
+    HTTPD_DATA_PATH=/var/www \
+    HTTPD_DATA_ORIG_PATH=/var/www \
+    HTTPD_LOG_PATH=/var/log/httpd
+
+COPY 2.4/s2i/bin/ $STI_SCRIPTS_PATH
+COPY 2.4/root /
+
+# Reset permissions of filesystem to default values
+RUN /usr/libexec/httpd-prepare && rpm-file-permissions
+
+USER 1001
+
+# Not using VOLUME statement since it's not working in OpenShift Online:
+# https://github.com/sclorg/httpd-container/issues/30
+# VOLUME ["${HTTPD_DATA_PATH}"]
+# VOLUME ["${HTTPD_LOG_PATH}"]
+
+CMD ["/usr/bin/run-httpd"]
+
+----
+
+
