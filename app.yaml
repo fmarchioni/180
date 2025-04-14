@@ -26,7 +26,7 @@ metadata:
   namespace: myproject
 spec:
   selector:
-    app: httpd
+    app: apache
   ports:
     - protocol: TCP
       port: 80
