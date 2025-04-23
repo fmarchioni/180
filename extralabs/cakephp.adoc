@@ -1,0 +1,92 @@
+
+= Lab di esercitazione n. 2
+
+== Descrizione: 
+
+Esplorazione e gestione di un'applicazione CakePHP su OpenShift
+
+=== Installazione
+
+* Istanziare un'applicazione
+
+  - Usa il template cakephp-ephemeral per creare un'applicazione funzionante.
+
+  - Aggiungere una pagina PHP: crea una pagina `test.php` all'interno del Container.
+
+  - Posiziona il file in /opt/app-root/src/webroot.
+
+  - La pagina deve:
+
+    * Collegarsi al database MySQL usando le variabili d’ambiente già presenti.
+
+    * Elencare tutte le tabelle presenti nel database. Di seguito una bozza della pagina da completare:
+
+[source,php]
+----
+<?php
+$host = getenv('DATABASE_SERVICE_HOST') ?: 'mysql';
+$port = getenv('DATABASE_SERVICE_PORT') ?: 3306;
+$user = getenv('MYSQL_USER') ?: '<<CHANGEME>>';
+$pass = getenv('MYSQL_PASSWORD') ?: '<<CHANGEME>>';
+$dbname = getenv('MYSQL_DATABASE') ?: '<<CHANGEME>>';
+
+try {
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    echo "<h1>Database Schema: $dbname</h1>";
+
+    $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+
+    foreach ($tables as $table) {
+        echo "<h2>Table: $table</h2>";
+        echo "<table border='1' cellpadding='5'><tr><th>Field</th><th>Type</th><th>Null</th><th>Key</th><th>Default</th><th>Extra</th></tr>";
+
+        $stmt = $pdo->query("DESCRIBE `$table`");
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            echo "<tr>";
+            foreach ($row as $cell) {
+                echo "<td>" . htmlspecialchars($cell) . "</td>";
+            }
+            echo "</tr>";
+        }
+
+        echo "</table><br>";
+    }
+} catch (PDOException $e) {
+    echo "<p>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+}
+?>
+----
+
+
+=== Configurare i probes di health check
+
+* Nella root del container c'è una pagina php che potete utilizzare per gli health checks sulla porta 8080.
+
+* Imposta un liveness probe con i seguenti parametri:
+
+  - initialDelaySeconds: 10
+
+  - timeoutSeconds: 5
+
+  - failureThreshold: 3
+
+  - periodSeconds: 15
+
+=== Impostare le risorse richieste e i limiti
+
+* Imposta le seguenti request e limits sul DeploymentConfig:
+
+  - Request CPU: 200m
+
+  - Request Memory: 256Mi
+
+  - Limits CPU: 500m
+
+  - Limits Memory: 512Mi
+
+===  Analizzare la capacità del cluster
+
+Verifica se il nodo dove gira l'applicazione ha abbastanza memoria disponibile per scalare il deployment a 6 repliche, mantenendo i limiti e le richieste definite sopra.
+        
