@@ -1,12 +1,51 @@
-Extra commands to enhance the Lab 3.2 with nsenter:
+# Extra Lab 3.2:
+
+1) Hacking del comando ps nel container ubi9
+
+2) Uso di nsenter per lanciare il ps dal nodo (anzichè usare il ps del container)
 
 ----
-lab start pods-containers
-. . . .
+# devi lanciarlo come root
+oc login -u admin -p redhat ocp
 
-# processes runnin in the container
-nsenter --target $PID --pid bash -c 'ps -ef' 
+oc run ubi9-command -it   --image registry.ocp4.example.com:8443/ubi9/ubi -- /bin/bash
 
-# send output to the standard out of the process identified by PID
-nsenter --target $PID --mount --uts --ipc --net --pid   bash -c 'echo "🔥 Hello from outside!" > /dev/pts/0'
+
+# Creiamo una cartella per il comando fasullo
+mkdir -p /tmp/fakebin
+
+# Creiamo lo script fasullo
+cat <<'EOF' > /tmp/fakebin/ps
+#!/bin/sh
+echo "Sei stato hackerato! Non ti faccio vedere i processi!"
+EOF
+
+# Rendiamolo eseguibile
+chmod +x /tmp/fakebin/ps
+ 
+# Linkiamo 
+ln -sf /tmp/fakebin/ps /usr/bin/ps
+
+#test
+ps
+
+sleep infinity
+
+--------Apri altro terminale
+
+oc exec ubi9-command ps
+"Sei stato hackerato! Non ti faccio vedere i processi!"
+
+
+oc debug node/master01
+chroot /host
+
+CID=$(crictl ps --name ubi9-command -o json | jq -r .containers[0].id)
+crictl inspect $CID | grep pid
+
+PID=$(crictl inspect "$CID" | jq -r '.info.pid')
+#se non va copia il pid dall'inspect
+
+nsenter --target $PID --pid bash -c 'ps -ef'
+
 ----
