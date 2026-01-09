@@ -1,3 +1,6 @@
+# Soluzione
+
+Soluzione dell'esercizio descritto in **change-triggers.md**
 ```
 $ oc new-project httpd-triggers
 ```
