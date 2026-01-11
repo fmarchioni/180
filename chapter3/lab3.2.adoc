@@ -1,51 +1,195 @@
-# Extra Lab 3.2:
+# Usare `nsenter` per smascherare comandi alterati nei container
 
-1) Hacking del comando ps nel container ubi9
+Questo documento mostra **perché e come usare `nsenter`** per eseguire comandi **dal nodo host** invece di affidarsi ai binari presenti nel container.
 
-2) Uso di nsenter per lanciare il ps dal nodo (anzichè usare il ps del container)
+Lo scenario dimostra un caso volutamente *malevolo*: il comando `ps` all'interno di un container viene **sostituito (hackerato)**. Usando `nsenter`, eseguiamo invece il `ps` del nodo, entrando nei namespace del container, e otteniamo la **verità sui processi in esecuzione**.
 
-----
-# devi lanciarlo come root
+---
+
+## Scenario
+
+* Container basato su **UBI9**
+* Il comando `ps` nel container viene sovrascritto con uno script fasullo
+* Dal container e da `oc exec` il risultato è falsato
+* Dal nodo, usando `nsenter`, otteniamo il risultato reale
+
+---
+
+## 1️⃣ Login come amministratore OpenShift
+
+> Serve essere **cluster-admin** per accedere ai nodi.
+
+```bash
+# Login come admin
 oc login -u admin -p redhat ocp
+```
 
-oc run ubi9-command -it   --image registry.ocp4.example.com:8443/ubi9/ubi -- /bin/bash
+---
 
+## 2️⃣ Avvio di un container UBI9 interattivo
 
-# Creiamo una cartella per il comando fasullo
+> Creiamo un pod temporaneo per eseguire i test.
+
+```bash
+oc run ubi9-command -it \
+  --image registry.ocp4.example.com:8443/ubi9/ubi \
+  -- /bin/bash
+```
+
+Ora siamo **dentro il container**.
+
+---
+
+## 3️⃣ Creazione di un comando `ps` fasullo nel container
+
+> Simuliamo un attacco: il binario `ps` viene sostituito.
+
+```bash
+# Creiamo una directory per i binari falsi
 mkdir -p /tmp/fakebin
+```
 
-# Creiamo lo script fasullo
+```bash
+# Creiamo uno script che si spaccia per 'ps'
 cat <<'EOF' > /tmp/fakebin/ps
 #!/bin/sh
 echo "Sei stato hackerato! Non ti faccio vedere i processi!"
 EOF
+```
 
-# Rendiamolo eseguibile
+```bash
+# Rendiamo eseguibile il comando fasullo
 chmod +x /tmp/fakebin/ps
- 
-# Linkiamo 
+```
+
+```bash
+# Sovrascriviamo il vero ps con un symlink malevolo
 ln -sf /tmp/fakebin/ps /usr/bin/ps
+```
 
-#test
+---
+
+## 4️⃣ Verifica: il comando `ps` è compromesso
+
+```bash
 ps
+```
 
+Output:
+
+```text
+Sei stato hackerato! Non ti faccio vedere i processi!
+```
+
+👉 **Il container non mostra più i processi reali.**
+
+Manteniamo il container in vita:
+
+```bash
 sleep infinity
+```
 
---------Apri altro terminale
+---
 
+## 5️⃣ Test da un altro terminale con `oc exec`
+
+> Anche da fuori dal container, il comando rimane compromesso.
+
+```bash
 oc exec ubi9-command ps
-"Sei stato hackerato! Non ti faccio vedere i processi!"
+```
 
+Output:
 
+```text
+Sei stato hackerato! Non ti faccio vedere i processi!
+```
+
+👉 `oc exec` **usa i binari del container**, quindi non è affidabile in caso di compromissione.
+
+---
+
+## 6️⃣ Accesso al nodo OpenShift
+
+> Ora passiamo al nodo per eseguire i comandi **dal sistema host**.
+
+```bash
 oc debug node/master01
+```
+
+```bash
+# Entriamo nel filesystem del nodo
 chroot /host
+```
 
+Da qui in poi **stiamo operando sul nodo**, non nel container.
+
+---
+
+## 7️⃣ Individuazione del PID reale del container
+
+> Usiamo `crictl` per trovare il processo del container.
+
+```bash
 CID=$(crictl ps --name ubi9-command -o json | jq -r .containers[0].id)
-crictl inspect $CID | grep pid
+```
 
+```bash
+# Ispezioniamo il container per trovare il PID
+crictl inspect "$CID" | grep pid
+```
+
+Oppure direttamente:
+
+```bash
 PID=$(crictl inspect "$CID" | jq -r '.info.pid')
-#se non va copia il pid dall'inspect
+```
 
+> Se `jq` non è disponibile, copia il PID manualmente dall'output di `crictl inspect`.
+
+---
+
+## 8️⃣ Uso di `nsenter` per entrare nei namespace del container
+
+> Qui sta il punto chiave: **usiamo i binari del nodo**, ma nei namespace del container.
+
+```bash
 nsenter --target $PID --pid bash -c 'ps -ef'
+```
 
-----
+### 🔍 Cosa succede davvero
+
+* `nsenter` usa il **ps del nodo host**
+* Entra nel **PID namespace del container**
+* Ignora completamente il `ps` hackerato nel filesystem del container
+
+👉 **Questo è l'elenco reale dei processi del container.**
+
+---
+
+## 🎯 Conclusioni
+
+* ❌ I comandi eseguiti **dentro il container** possono essere alterati
+* ❌ `oc exec` **non è affidabile** in caso di compromissione
+* ✅ `nsenter` permette di:
+
+  * usare strumenti fidati del nodo
+  * entrare nei namespace del container
+  * ottenere informazioni attendibili
+
+👉 **Per troubleshooting avanzato e sicurezza, `nsenter` è lo strumento corretto.**
+
+---
+
+## 📌 Messaggio chiave
+
+> **Non fidarti mai dei binari di un container compromesso.**
+> Se vuoi la verità, entra dai namespace usando gli strumenti del nodo.
+
+---
+
+Se vuoi, nel prossimo passo posso:
+
+* trasformare questo esempio in **laboratorio didattico**
+* aggiungere una sezione **"perché `oc exec` non basta"**
+* estendere l'esempio a `/proc`, `/net` o mount namespace
