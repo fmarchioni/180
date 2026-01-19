@@ -1,5 +1,8 @@
 ## Demo di `nsenter`su OpenShift
 
+![Demo nsenter](nsenter.png)
+
+
 In questa dimostrazione vediamo come eseguire un comando **non presente all’interno di un container** (`netstat`) sfruttando l’accesso al **node** e lo strumento `nsenter`.
 L’idea è entrare nel **network namespace del processo del container**, aggirando i limiti dell’immagine minimal.
 
